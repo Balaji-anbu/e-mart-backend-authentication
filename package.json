@@ -9,4 +9,8 @@
     "mongodb": "^6.13.1",
     "mongoose": "^8.10.1"
   }
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"  // Optional: If you want to use nodemon for development
+  },
 }
