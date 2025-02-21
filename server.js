@@ -23,11 +23,6 @@ const UserSchema = new mongoose.Schema({
   password: String,
 });
 const User = mongoose.model("User", UserSchema);
-
-// ✅ Default Route for Root Path
-app.get("/", (req, res) => {
-  res.send("Welcome to the Authentication API!");
-});
 // ✅ Register API (Stores encrypted password)
 app.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
