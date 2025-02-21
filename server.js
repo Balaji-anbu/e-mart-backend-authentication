@@ -1,4 +1,4 @@
-require("dotenv").config();
+require("dotenv").config(); // Ensure you're loading environment variables
 const express = require("express");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
@@ -10,7 +10,10 @@ app.use(express.json());
 app.use(cors());
 
 // 📌 Connect to MongoDB Atlas
-mongoose.connect(process.env.MONGO_URI, {  })
+mongoose.connect(process.env.MONGO_URI, {
+  useNewUrlParser: true, 
+  useUnifiedTopology: true,
+})
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ MongoDB Connection Failed:", err));
 
@@ -76,4 +79,7 @@ function verifyToken(req, res, next) {
 }
 
 // ✅ Start Server
-app.listen(5000, () => console.log("🚀 Server running on port 5000"));
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
