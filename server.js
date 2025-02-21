@@ -24,7 +24,7 @@ const UserSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", UserSchema);
 // ✅ Register API (Stores encrypted password)
-app.post("/register", async (req, res) => {
+app.post("register", async (req, res) => {
   const { username, email, password } = req.body;
 
   // Check if user already exists
