@@ -24,7 +24,7 @@ const UserSchema = new mongoose.Schema({
 });
 const User = mongoose.model("User", UserSchema);
 // ✅ Register API (Stores encrypted password)
-app.post("register", async (req, res) => {
+app.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
 
   // Check if user already exists
@@ -77,10 +77,5 @@ function verifyToken(req, res, next) {
 }
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
-// ✅ Start Server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
