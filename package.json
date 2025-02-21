@@ -11,6 +11,6 @@
   }
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"  // Optional: If you want to use nodemon for development
+    "dev": "nodemon server.js"
   },
 }
