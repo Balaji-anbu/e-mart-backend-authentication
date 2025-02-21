@@ -11,8 +11,7 @@ app.use(cors());
 
 // 📌 Connect to MongoDB Atlas
 mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true, 
-  useUnifiedTopology: true,
+ 
 })
   .then(() => console.log("✅ MongoDB Connected"))
   .catch(err => console.log("❌ MongoDB Connection Failed:", err));
@@ -24,6 +23,17 @@ const UserSchema = new mongoose.Schema({
   password: String,
 });
 const User = mongoose.model("User", UserSchema);
+
+// ✅ Default Route for Root Path
+app.get("/", (req, res) => {
+  res.send("Welcome to the Authentication API!");
+});
+
+// ✅ Start Server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
 
 // ✅ Register API (Stores encrypted password)
 app.post("/register", async (req, res) => {
