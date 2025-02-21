@@ -28,13 +28,6 @@ const User = mongoose.model("User", UserSchema);
 app.get("/", (req, res) => {
   res.send("Welcome to the Authentication API!");
 });
-
-// ✅ Start Server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
-});
-
 // ✅ Register API (Stores encrypted password)
 app.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
