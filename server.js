@@ -75,6 +75,43 @@ function verifyToken(req, res, next) {
   }
 }
 
+
+app.post("/add-phone", verifyToken, async (req, res) => {
+  try {
+    const { mobile } = req.body;
+
+    // Validate mobile number input
+    if (!mobile || !/^\d{10}$/.test(mobile)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid mobile number. Must be 10 digits."
+      });
+    }
+
+    // Update user's mobile number
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { mobile },
+      { new: true, select: "-password" } // Exclude password from response
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "✅ Mobile number updated successfully!",
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ success: false, message: "Error updating profile" });
+  }
+});
+
+
 // Health Check Endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
