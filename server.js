@@ -75,20 +75,11 @@ function verifyToken(req, res, next) {
   }
 }
 
-
 app.post("/add-phone", verifyToken, async (req, res) => {
   try {
     const { mobile } = req.body;
 
-    // Validate mobile number input
-    if (!mobile || !/^\d{13}$/.test(mobile)) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid mobile number. Must be 10 digits."
-      });
-    }
-
-    // Update user's mobile number
+    // Update user's mobile number without validation
     const updatedUser = await User.findByIdAndUpdate(
       req.user.id,
       { mobile },
@@ -110,6 +101,7 @@ app.post("/add-phone", verifyToken, async (req, res) => {
     res.status(500).json({ success: false, message: "Error updating profile" });
   }
 });
+
 
 
 // Health Check Endpoint
