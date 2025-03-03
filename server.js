@@ -81,7 +81,7 @@ app.post("/add-phone", verifyToken, async (req, res) => {
     const { mobile } = req.body;
 
     // Validate mobile number input
-    if (!mobile || !/^\d{10}$/.test(mobile)) {
+    if (!mobile || !/^\d{13}$/.test(mobile)) {
       return res.status(400).json({
         success: false,
         message: "Invalid mobile number. Must be 10 digits."
