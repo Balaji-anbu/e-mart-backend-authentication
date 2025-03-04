@@ -40,6 +40,7 @@ const UserSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+   mobile: { type: String },
   password: {
     type: String,
     required: true
@@ -47,8 +48,7 @@ const UserSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  },
-  mobile: { type: String },
+  }
 });
 
 const User = mongoose.model("User", UserSchema);
