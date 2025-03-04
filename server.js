@@ -47,7 +47,8 @@ const UserSchema = new mongoose.Schema({
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  mobile: { type: String },
 });
 
 const User = mongoose.model("User", UserSchema);
