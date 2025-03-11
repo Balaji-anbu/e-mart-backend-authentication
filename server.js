@@ -4,12 +4,15 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const cors = require("cors");
+const bodyParser = require("body-parser");
 
 // Initialize Express app
 const app = express();
+const port = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.json());
+app.use(bodyParser.json());
 app.use(cors({
   origin: '*', // In production, replace with your Flutter app's domain
   methods: ['GET', 'POST'],
@@ -17,8 +20,9 @@ app.use(cors({
 }));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGO_URI, {
- 
+const mongoURI = process.env.MONGO_URI;
+mongoose.connect(mongoURI, {
+  // Connection options can be added here
 })
 .then(() => console.log("✅ MongoDB Connected"))
 .catch(err => {
@@ -26,8 +30,10 @@ mongoose.connect(process.env.MONGO_URI, {
   process.exit(1); // Exit if database connection fails
 });
 
+// ===== SCHEMAS & MODELS =====
+
 // User Schema & Model
-const UserSchema = new mongoose.Schema({
+const userSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
@@ -40,7 +46,9 @@ const UserSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
-   mobile: { type: String },
+  mobile: { 
+    type: String 
+  },
   password: {
     type: String,
     required: true
@@ -51,12 +59,104 @@ const UserSchema = new mongoose.Schema({
   }
 });
 
-const User = mongoose.model("User", UserSchema);
+const cartSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  items: [{
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product'
+    },
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 1
+    },
+    price: {
+      type: Number,
+      required: true
+    }
+  }],
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
 
-// Middleware to Verify JWT Token
-function verifyToken(req, res, next) {
+const wishlistSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  items: [{
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product'
+    },
+    addedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }]
+});
+
+const orderSchema = new mongoose.Schema({
+  userId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  items: [{
+    productId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Product'
+    },
+    quantity: {
+      type: Number,
+      required: true
+    },
+    price: {
+      type: Number,
+      required: true
+    }
+  }],
+  totalPrice: {
+    type: Number,
+    required: true
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    default: 'pending'
+  },
+  orderDate: { 
+    type: Date, 
+    default: Date.now 
+  },
+  shippingAddress: {
+    type: String
+  }
+});
+
+// Initialize models
+const User = mongoose.model("User", userSchema);
+const Cart = mongoose.model("Cart", cartSchema);
+const Wishlist = mongoose.model("Wishlist", wishlistSchema);
+const Order = mongoose.model("Order", orderSchema);
+
+// ===== MIDDLEWARE =====
+
+// JWT Secret Key
+const JWT_SECRET = process.env.JWT_SECRET;
+
+// Middleware to verify JWT
+const verifyToken = (req, res, next) => {
   try {
-    const token = req.header("Authorization")?.replace("Bearer ", "");
+    const token = req.header("Authorization")?.replace("Bearer ", "") || req.header("Authorization");
     
     if (!token) {
       return res.status(401).json({ 
@@ -65,7 +165,7 @@ function verifyToken(req, res, next) {
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
     next();
   } catch (err) {
@@ -74,45 +174,20 @@ function verifyToken(req, res, next) {
       message: "Invalid token." 
     });
   }
-}
+};
 
-app.post("/add-phone", verifyToken, async (req, res) => {
-  try {
-    const { mobile } = req.body;
-
-    // Update user's mobile number without validation
-    const updatedUser = await User.findByIdAndUpdate(
-      req.user.id,
-      { mobile },
-      { new: true, select: "-password" } // Exclude password from response
-    );
-
-    if (!updatedUser) {
-      return res.status(404).json({ success: false, message: "User not found" });
-    }
-
-    res.json({
-      success: true,
-      message: "✅ Mobile number updated successfully!",
-      user: updatedUser
-    });
-
-  } catch (error) {
-    console.error("Profile update error:", error);
-    res.status(500).json({ success: false, message: "Error updating profile" });
-  }
-});
-
-
+// ===== ROUTES =====
 
 // Health Check Endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ 
     status: 'OK',
     timestamp: new Date(),
-    service: 'e-mart-backend-authentication'
+    service: 'e-mart-backend'
   });
 });
+
+// ==== AUTH ROUTES ====
 
 // Register API
 app.post("/register", async (req, res) => {
@@ -195,8 +270,8 @@ app.post("/login", async (req, res) => {
 
     // Generate JWT Token
     const token = jwt.sign(
-      { id: user._id, email: user.email },
-      process.env.JWT_SECRET,
+      { id: user._id, email: user.email, username: user.username },
+      JWT_SECRET,
       { expiresIn: "24d" }
     );
 
@@ -219,7 +294,9 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// Protected Profile API
+// ==== USER ROUTES ====
+
+// Get User Profile
 app.get("/profile", verifyToken, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
@@ -244,6 +321,507 @@ app.get("/profile", verifyToken, async (req, res) => {
   }
 });
 
+// Update User Phone Number
+app.post("/add-phone", verifyToken, async (req, res) => {
+  try {
+    const { mobile } = req.body;
+
+    // Update user's mobile number
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id,
+      { mobile },
+      { new: true, select: "-password" } // Exclude password from response
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+
+    res.json({
+      success: true,
+      message: "✅ Mobile number updated successfully!",
+      user: updatedUser
+    });
+
+  } catch (error) {
+    console.error("Profile update error:", error);
+    res.status(500).json({ success: false, message: "Error updating profile" });
+  }
+});
+
+// ==== CART ROUTES ====
+
+// Add item to cart
+app.post('/add-to-cart', verifyToken, async (req, res) => {
+  try {
+    const { productId, quantity, price } = req.body;
+    const userId = req.user.id;
+
+    if (!productId || !quantity || !price) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Product ID, quantity, and price are required" 
+      });
+    }
+
+    let cart = await Cart.findOne({ userId });
+    if (!cart) {
+      cart = new Cart({ userId, items: [] });
+    }
+
+    // Check if the product already exists in the cart
+    const existingItemIndex = cart.items.findIndex(item => item.productId.toString() === productId);
+    if (existingItemIndex > -1) {
+      cart.items[existingItemIndex].quantity += quantity;
+    } else {
+      cart.items.push({ productId, quantity, price });
+    }
+
+    cart.updatedAt = Date.now();
+    await cart.save();
+    
+    res.status(200).json({
+      success: true,
+      message: "Item added to cart successfully",
+      cart
+    });
+  } catch (err) {
+    console.error("Add to cart error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error adding item to cart"
+    });
+  }
+});
+
+// Retrieve cart items
+app.get('/get-cart', verifyToken, async (req, res) => {
+  try {
+    const cart = await Cart.findOne({ userId: req.user.id }).populate('items.productId');
+    
+    if (!cart) {
+      return res.json({
+        success: true,
+        message: "Cart is empty",
+        cart: { userId: req.user.id, items: [] }
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      cart
+    });
+  } catch (err) {
+    console.error("Get cart error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving cart"
+    });
+  }
+});
+
+// Update cart item quantity
+app.post('/update-cart', verifyToken, async (req, res) => {
+  try {
+    const { productId, quantity } = req.body;
+    const userId = req.user.id;
+
+    if (!productId || quantity === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID and quantity are required"
+      });
+    }
+
+    const cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found"
+      });
+    }
+
+    const itemIndex = cart.items.findIndex(item => item.productId.toString() === productId);
+    if (itemIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found in cart"
+      });
+    }
+
+    if (quantity <= 0) {
+      // Remove item if quantity is 0 or negative
+      cart.items.splice(itemIndex, 1);
+    } else {
+      // Update quantity
+      cart.items[itemIndex].quantity = quantity;
+    }
+
+    cart.updatedAt = Date.now();
+    await cart.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Cart updated successfully",
+      cart
+    });
+  } catch (err) {
+    console.error("Update cart error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error updating cart"
+    });
+  }
+});
+
+// Remove item from cart
+app.delete('/remove-from-cart/:productId', verifyToken, async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user.id;
+
+    const cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found"
+      });
+    }
+
+    const itemIndex = cart.items.findIndex(item => item.productId.toString() === productId);
+    if (itemIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found in cart"
+      });
+    }
+
+    cart.items.splice(itemIndex, 1);
+    cart.updatedAt = Date.now();
+    await cart.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Item removed from cart successfully",
+      cart
+    });
+  } catch (err) {
+    console.error("Remove from cart error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error removing item from cart"
+    });
+  }
+});
+
+// Clear cart
+app.delete('/clear-cart', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const cart = await Cart.findOne({ userId });
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "Cart not found"
+      });
+    }
+
+    cart.items = [];
+    cart.updatedAt = Date.now();
+    await cart.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Cart cleared successfully",
+      cart
+    });
+  } catch (err) {
+    console.error("Clear cart error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error clearing cart"
+    });
+  }
+});
+
+// ==== WISHLIST ROUTES ====
+
+// Add item to wishlist
+app.post('/add-to-wishlist', verifyToken, async (req, res) => {
+  try {
+    const { productId } = req.body;
+    const userId = req.user.id;
+
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required"
+      });
+    }
+
+    let wishlist = await Wishlist.findOne({ userId });
+    if (!wishlist) {
+      wishlist = new Wishlist({ userId, items: [] });
+    }
+
+    if (!wishlist.items.some(item => item.productId.toString() === productId)) {
+      wishlist.items.push({ productId, addedAt: Date.now() });
+      await wishlist.save();
+      
+      res.status(200).json({
+        success: true,
+        message: "Item added to wishlist",
+        wishlist
+      });
+    } else {
+      res.status(400).json({
+        success: false,
+        message: "Item already in wishlist"
+      });
+    }
+  } catch (err) {
+    console.error("Add to wishlist error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error adding item to wishlist"
+    });
+  }
+});
+
+// Retrieve wishlist items
+app.get('/get-wishlist', verifyToken, async (req, res) => {
+  try {
+    const wishlist = await Wishlist.findOne({ userId: req.user.id }).populate('items.productId');
+    
+    if (!wishlist) {
+      return res.json({
+        success: true,
+        message: "Wishlist is empty",
+        wishlist: { userId: req.user.id, items: [] }
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      wishlist
+    });
+  } catch (err) {
+    console.error("Get wishlist error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving wishlist"
+    });
+  }
+});
+
+// Remove item from wishlist
+app.delete('/remove-from-wishlist/:productId', verifyToken, async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user.id;
+
+    const wishlist = await Wishlist.findOne({ userId });
+    if (!wishlist) {
+      return res.status(404).json({
+        success: false,
+        message: "Wishlist not found"
+      });
+    }
+
+    const itemIndex = wishlist.items.findIndex(item => item.productId.toString() === productId);
+    if (itemIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Item not found in wishlist"
+      });
+    }
+
+    wishlist.items.splice(itemIndex, 1);
+    await wishlist.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Item removed from wishlist successfully",
+      wishlist
+    });
+  } catch (err) {
+    console.error("Remove from wishlist error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error removing item from wishlist"
+    });
+  }
+});
+
+// Clear wishlist
+app.delete('/clear-wishlist', verifyToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const wishlist = await Wishlist.findOne({ userId });
+    if (!wishlist) {
+      return res.status(404).json({
+        success: false,
+        message: "Wishlist not found"
+      });
+    }
+
+    wishlist.items = [];
+    await wishlist.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Wishlist cleared successfully",
+      wishlist
+    });
+  } catch (err) {
+    console.error("Clear wishlist error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error clearing wishlist"
+    });
+  }
+});
+
+// ==== ORDER ROUTES ====
+
+// Place an order
+app.post('/place-order', verifyToken, async (req, res) => {
+  try {
+    const { items, shippingAddress } = req.body;
+    const userId = req.user.id;
+
+    if (!items || !items.length) {
+      return res.status(400).json({
+        success: false,
+        message: "Order items are required"
+      });
+    }
+
+    // Calculate total price
+    const totalPrice = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+
+    const order = new Order({
+      userId,
+      items,
+      totalPrice,
+      shippingAddress,
+      status: 'pending'
+    });
+    
+    await order.save();
+
+    // Optionally clear the cart after placing order
+    await Cart.findOneAndUpdate(
+      { userId },
+      { $set: { items: [], updatedAt: Date.now() } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: "Order placed successfully",
+      order
+    });
+  } catch (err) {
+    console.error("Place order error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error placing order"
+    });
+  }
+});
+
+// Get user's orders
+app.get('/get-orders', verifyToken, async (req, res) => {
+  try {
+    const orders = await Order.find({ userId: req.user.id })
+      .populate('items.productId')
+      .sort({ orderDate: -1 }); // Most recent orders first
+    
+    res.status(200).json({
+      success: true,
+      orders
+    });
+  } catch (err) {
+    console.error("Get orders error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving orders"
+    });
+  }
+});
+
+// Get order details
+app.get('/order/:orderId', verifyToken, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+
+    const order = await Order.findOne({ _id: orderId, userId })
+      .populate('items.productId');
+    
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      order
+    });
+  } catch (err) {
+    console.error("Get order details error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving order details"
+    });
+  }
+});
+
+// Cancel order
+app.post('/cancel-order/:orderId', verifyToken, async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+
+    const order = await Order.findOne({ _id: orderId, userId });
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found"
+      });
+    }
+
+    // Only allow cancellation if order is pending or processing
+    if (order.status !== 'pending' && order.status !== 'processing') {
+      return res.status(400).json({
+        success: false,
+        message: `Cannot cancel order in ${order.status} status`
+      });
+    }
+
+    order.status = 'cancelled';
+    await order.save();
+
+    res.status(200).json({
+      success: true,
+      message: "Order cancelled successfully",
+      order
+    });
+  } catch (err) {
+    console.error("Cancel order error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error cancelling order"
+    });
+  }
+});
+
+// ===== ERROR HANDLING =====
+
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -262,7 +840,6 @@ app.use((req, res) => {
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`🚀 Server running on port ${port}`);
 });
