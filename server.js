@@ -372,7 +372,7 @@ app.post("/add-phone", verifyToken, async (req, res) => {
 // Add item to cart
 app.post('/add-to-cart', verifyToken, async (req, res) => {
   try {
-    const { userId, productId, quantity, price } = req.body;
+    const { productId, quantity, price } = req.body;
     const userId = req.user.userId; // Get the custom userId (e.g., "EGM-CUST-10001")
 
     if (!productId || !quantity || !price) {
