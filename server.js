@@ -62,16 +62,15 @@ const userSchema = new mongoose.Schema({
     default: Date.now
   }
 });
-
 const cartSchema = new mongoose.Schema({
   userId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
+    type: String, // Custom userId (e.g., "EGM-CUST-10001")
+    ref: 'User',  // Reference User collection
     required: true
   },
   items: [{
     productId: {
-      type: String,
+      type: String, // Product ID as String
       ref: 'Product'
     },
     quantity: {
@@ -89,6 +88,7 @@ const cartSchema = new mongoose.Schema({
     default: Date.now
   }
 });
+
 
 const wishlistSchema = new mongoose.Schema({
   userId: {
@@ -368,12 +368,11 @@ app.post("/add-phone", verifyToken, async (req, res) => {
 });
 
 // ==== CART ROUTES ====
-
 // Add item to cart
 app.post('/add-to-cart', verifyToken, async (req, res) => {
   try {
     const { productId, quantity, price } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId; // Get the custom userId (e.g., "EGM-CUST-10001")
 
     if (!productId || !quantity || !price) {
       return res.status(400).json({ 
@@ -383,12 +382,13 @@ app.post('/add-to-cart', verifyToken, async (req, res) => {
     }
 
     let cart = await Cart.findOne({ userId });
+
     if (!cart) {
       cart = new Cart({ userId, items: [] });
     }
 
     // Check if the product already exists in the cart
-    const existingItemIndex = cart.items.findIndex(item => item.productId.toString() === productId);
+    const existingItemIndex = cart.items.findIndex(item => item.productId === productId);
     if (existingItemIndex > -1) {
       cart.items[existingItemIndex].quantity += quantity;
     } else {
@@ -397,11 +397,18 @@ app.post('/add-to-cart', verifyToken, async (req, res) => {
 
     cart.updatedAt = Date.now();
     await cart.save();
-    
+
+    // Fetch the updated cart with user details
+    const updatedCart = await Cart.findById(cart._id).populate({
+      path: 'userId',
+      select: 'userId username email mobile', // Fetch specific fields
+      model: 'User'
+    });
+
     res.status(200).json({
       success: true,
       message: "Item added to cart successfully",
-      cart
+      cart: updatedCart
     });
   } catch (err) {
     console.error("Add to cart error:", err);
@@ -411,6 +418,7 @@ app.post('/add-to-cart', verifyToken, async (req, res) => {
     });
   }
 });
+
 
 // Retrieve cart items
 app.get('/get-cart', verifyToken, async (req, res) => {
