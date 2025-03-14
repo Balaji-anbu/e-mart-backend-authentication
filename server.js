@@ -372,7 +372,7 @@ app.post("/add-phone", verifyToken, async (req, res) => {
 // Add item to cart
 app.post('/add-to-cart', verifyToken, async (req, res) => {
   try {
-    const { productId, quantity, price } = req.body;
+    const { userId, productId, quantity, price } = req.body;
     const userId = req.user.userId; // Get the custom userId (e.g., "EGM-CUST-10001")
 
     if (!productId || !quantity || !price) {
@@ -393,7 +393,7 @@ app.post('/add-to-cart', verifyToken, async (req, res) => {
     if (existingItemIndex > -1) {
       cart.items[existingItemIndex].quantity += quantity;
     } else {
-      cart.items.push({ productId, quantity, price });
+      cart.items.push({userId, productId, quantity, price });
     }
 
     cart.updatedAt = Date.now();
