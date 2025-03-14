@@ -34,6 +34,10 @@ mongoose.connect(mongoURI, {
 
 // User Schema & Model
 const userSchema = new mongoose.Schema({
+  userId: {
+    type: String,
+    requird: true,
+  },
   username: {
     type: String,
     required: true,
