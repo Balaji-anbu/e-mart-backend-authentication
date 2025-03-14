@@ -211,11 +211,23 @@ app.post("/register", async (req, res) => {
       });
     }
 
+    // Generate unique user ID
+    const lastUser = await User.findOne().sort({ userId: -1 }); // Get the last user by userId
+    let newUserId = 10001; // Start from 10001
+    
+    if (lastUser && lastUser.userId) {
+      const lastUserIdNumber = parseInt(lastUser.userId.replace("EGM-CUST-", ""));
+      newUserId = lastUserIdNumber + 1;
+    }
+
+    const uniqueUserId = `EGM-CUST-${newUserId}`;
+
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
     // Create new user
     const newUser = new User({
+      userId: uniqueUserId,
       username,
       email,
       password: hashedPassword
@@ -225,7 +237,8 @@ app.post("/register", async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "✅ User registered successfully!"
+      message: "✅ User registered successfully!",
+      userId: uniqueUserId
     });
 
   } catch (error) {
@@ -236,6 +249,7 @@ app.post("/register", async (req, res) => {
     });
   }
 });
+
 
 // Login API
 app.post("/login", async (req, res) => {
