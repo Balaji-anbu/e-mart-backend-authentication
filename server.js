@@ -386,7 +386,7 @@ app.post('/add-to-cart', verifyToken, async (req, res) => {
       });
     }
 
-    let cart = await Cart.findOne({ userId });
+    let cart = await users.findOne({ userId });
 
     if (!cart) {
       cart = new Cart({ userId, items: [] });
