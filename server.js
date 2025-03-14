@@ -65,13 +65,13 @@ const userSchema = new mongoose.Schema({
 const cartSchema = new mongoose.Schema({
   userId: {
     type: String, // Custom userId (e.g., "EGM-CUST-10001")
-    ref: 'User',  // Reference User collection
+    ref: 'users',  // Reference User collection
     required: false
   },
   items: [{
     userId:{
       type: String,
-      ref: 'user',
+      ref: 'users',
     },
     productId: {
       type: String, // Product ID as String
@@ -386,7 +386,7 @@ app.post('/add-to-cart', verifyToken, async (req, res) => {
       });
     }
 
-    let cart = await users.findOne({ userId });
+    let cart = await Cart.findOne({ userId });
 
     if (!cart) {
       cart = new Cart({ userId, items: [] });
