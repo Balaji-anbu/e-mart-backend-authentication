@@ -66,7 +66,7 @@ const cartSchema = new mongoose.Schema({
   userId: {
     type: String, // Custom userId (e.g., "EGM-CUST-10001")
     ref: 'User',  // Reference User collection
-    required: true
+    required: false
   },
   items: [{
     userId:{
