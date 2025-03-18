@@ -428,16 +428,17 @@ app.post('/add-to-cart', verifyToken, async (req, res) => {
 // Retrieve cart items
 app.get('/get-cart', verifyToken, async (req, res) => {
   try {
-    const cart = await cart.findOne({ userId: req.user.id }).populate('items.productId');
-    
+    // Use the correct model name (Cart instead of cart)
+    const cart = await Cart.findOne({ userId: req.user.id }).populate('items.productId');
+
     if (!cart) {
       return res.json({
         success: true,
         message: "Cart is empty",
-        cart: { userId: req.users.userId, items: [] }
+        cart: { userId: req.user.id, items: [] } // Fixed `req.users.userId` to `req.user.id`
       });
     }
-    
+
     res.status(200).json({
       success: true,
       cart
