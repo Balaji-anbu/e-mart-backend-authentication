@@ -434,7 +434,7 @@ app.get('/get-cart', verifyToken, async (req, res) => {
       return res.json({
         success: true,
         message: "Cart is empty",
-        cart: { userId: req.user.id, items: [] }
+        cart: { userId: req.users.userId, items: [] }
       });
     }
     
