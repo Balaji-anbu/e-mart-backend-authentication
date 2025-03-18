@@ -428,7 +428,7 @@ app.post('/add-to-cart', verifyToken, async (req, res) => {
 // Retrieve cart items
 app.get('/get-cart', verifyToken, async (req, res) => {
   try {
-    const cart = await Cart.findOne({ userId: req.user.id }).populate('items.productId');
+    const cart = await cart.findOne({ userId: req.user.id }).populate('items.productId');
     
     if (!cart) {
       return res.json({
