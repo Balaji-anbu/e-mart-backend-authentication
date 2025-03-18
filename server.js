@@ -71,7 +71,8 @@ const cartSchema = new mongoose.Schema({
   items: [{
     userId:{
       type: String,
-      ref: 'users',
+      ref: 'users.userId',
+      req: true
     },
     productId: {
       type: String, // Product ID as String
