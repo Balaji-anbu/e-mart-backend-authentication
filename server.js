@@ -64,64 +64,60 @@ const productSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
-  name: {
+  productName: {
     type: String,
     required: true,
     trim: true
-  },
-  description: {
-    type: String,
-    required: true
-  },
-  price: {
-    type: Number,
-    required: true,
-    min: 0
-  },
-  discountedPrice: {
-    type: Number,
-    min: 0
   },
   category: {
     type: String,
     required: true
   },
-  images: [String],
-  mainImage: {
+  description: {
     type: String,
     required: true
   },
-  inStock: {
-    type: Boolean,
-    default: true
-  },
-  quantity: {
-    type: Number,
-    default: 0,
-    min: 0
-  },
-  ratings: {
-    average: {
-      type: Number,
-      default: 0,
-      min: 0,
-      max: 5
-    },
-    count: {
-      type: Number,
-      default: 0,
-      min: 0
-    }
+  createdAt: {
+    type: Date,
+    default: Date.now
   },
   updatedAt: {
     type: Date,
     default: Date.now
   },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  }
+  variants: [
+    {
+      SKU: {
+        type: String,
+        required: true,
+        unique: true
+      },
+      dealerPrice: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      specialPrice: {
+        type: Number,
+        min: 0
+      },
+      MRP: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      imageUrl: {
+        type: String,
+        required: true
+      },
+      inStock: {
+        type: Boolean,
+        default: true
+      }
+    }
+  ]
 });
+
 
 // Add text index for search capabilities
 productSchema.index({ name: 'text', description: 'text' });
