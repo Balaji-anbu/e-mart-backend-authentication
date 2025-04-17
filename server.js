@@ -63,6 +63,66 @@ const userSchema = new mongoose.Schema({
   }
 });
 
+
+const productSchema = new mongoose.Schema({
+  productId: {
+    type: String,
+    required: true,
+    unique: true
+  },
+  productName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  category: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
+    type: Date,
+    default: Date.now
+  },
+  variants: [
+    {
+      SKU: {
+        type: String,
+        required: true,
+        unique: true
+      },
+      dealerPrice: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      specialPrice: {
+        type: Number,
+        min: 0
+      },
+      MRP: {
+        type: Number,
+        required: true,
+        min: 0
+      },
+      imageUrl: {
+        type: String,
+        required: true
+      },
+      inStock: {
+        type: Boolean,
+        default: true
+      }
+    }
+  ]
+});
 // Cart Schema & Model
 const cartSchema = new mongoose.Schema({
   userId: {
@@ -151,6 +211,7 @@ const orderSchema = new mongoose.Schema({
 
 // Initialize models
 const User = mongoose.model("User", userSchema);
+const Product = mongoose.model("Product", productSchema);
 const Cart = mongoose.model("Cart", cartSchema);
 const Wishlist = mongoose.model("Wishlist", wishlistSchema);
 const Order = mongoose.model("Order", orderSchema);
@@ -370,6 +431,45 @@ app.post("/add-phone", verifyToken, async (req, res) => {
     res.status(500).json({ success: false, message: "Error updating profile" });
   }
 });
+
+// ==== PRODUCT ROUTES ====
+app.get("/products", verifyToken, async (req, res) => {
+  try {
+    // Get query parameters for filtering
+    const { category, inStock } = req.query;
+    
+    // Build query object
+    const query = {};
+    
+    // Add filters if provided
+    if (category) {
+      query.category = category;
+    }
+    
+    if (inStock === 'true') {
+      query['variants.inStock'] = true;
+    }
+
+    // Fetch products based on query
+    const products = await Product.find(query);
+    
+    // Return successful response with products
+    res.json({
+      success: true,
+      count: products.length,
+      products
+    });
+    
+  } catch (error) {
+    console.error("Products fetch error:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error fetching products" 
+    });
+  }
+});
+
+
 
 // ==== CART ROUTES ====
 
